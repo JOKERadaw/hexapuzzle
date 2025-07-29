@@ -184,7 +184,7 @@
             <h3 class="text-lg font-medium mb-2 text-gray-200">Movement Rules:</h3>
             <ul>
                 <li>You can <strong>ONLY</strong> move by jumping - no regular movement allowed.</li>
-                <li><strong>Jump Mechanism:</strong> Click on an empty space or the gold cell that is two steps away from a **Green** or **Blue** cell. The game will deduce which cell is jumping.</li>
+                <li><strong>Jump Mechanism:</strong> First, **click on a Green (Player) or Blue cell** to select it. Then, click on an empty space or the gold cell that is two steps away to make the jump.</li>
                 <li><strong>Jump Requirements:</strong>
                     <ul>
                         <li>You can jump over <strong>BLUE</strong> cells (they stay in place).</li>
@@ -271,6 +271,7 @@
         let gameActive = false;
         let editorMode = false;
         let selectedCellType = 'EMPTY'; // For editor mode
+        let selectedJumpingHex = null; // New: Stores the hex object that is currently selected to jump
 
         // Panning and Zooming variables
         let offsetX = 0;
@@ -665,6 +666,9 @@
             grid.forEach((type, key) => {
                 const { q, r } = JSON.parse(key); // Parse the key back to object
                 let color;
+                let currentBorderColor = '#4a5568'; // Default border color
+                let currentBorderWidth = 2; // Default border width
+
                 switch (type) {
                     case 'EMPTY': color = '#1a202c'; break; // Dark background for empty cells
                     case 'PLAYER': color = '#10b981'; break; // Green
@@ -674,13 +678,15 @@
                     case 'GOLD': color = '#facc15'; break;  // Gold
                     default: color = '#1a202c';
                 }
-                drawHexagon(q, r, color);
-            });
 
-            // Highlight player in game mode
-            if (gameActive && playerHex) {
-                 drawHexagon(playerHex.q, playerHex.r, '#10b981', '#63b3ed', 3 / scale); // Border scales inversely with zoom
-            }
+                // Highlight selected jumping hex in game mode
+                if (gameActive && selectedJumpingHex && selectedJumpingHex.q === q && selectedJumpingHex.r === r) {
+                    currentBorderColor = '#e2e8f0'; // White border for selected jumper
+                    currentBorderWidth = 4 / scale; // Make it thicker and scale inversely with zoom
+                }
+
+                drawHexagon(q, r, color, currentBorderColor, currentBorderWidth);
+            });
 
             // Highlight dragged hex in editor mode
             if (editorMode && isDragging && draggedHex) {
@@ -708,6 +714,7 @@
             grid.clear();
             playerHex = null;
             goldHex = null;
+            selectedJumpingHex = null; // Clear selection on new level load
 
             let mapToLoad = levelData;
 
@@ -734,7 +741,9 @@
                     if (type === 'GOLD') goldHex = { q, r };
                 }
                 if (!playerHex || !goldHex) {
-                    throw new Error("Map must contain both a player and a gold cell.");
+                    // If a level is loaded that doesn't have player/gold, create a default one
+                    setMessageBox("Warning: Loaded map is missing Player or Gold cell. Adding default player/gold.", 'error');
+                    createDefaultGrid(); // Fallback to a default small grid if player/gold are missing
                 }
             } catch (e) {
                 setMessageBox(`Error loading map: ${e.message}. Loading default.`, 'error');
@@ -769,19 +778,21 @@
 
         function startGame() {
             if (!playerHex || !goldHex) {
-                setMessageBox("Error: Map must contain both a Player (P) and a Gold (G) cell to start the game.", 'error');
+                setMessageBox("Error: Map must contain both a Player (P) and a Gold (G) cell to start the game. Please add them in editor mode.", 'error');
                 return;
             }
             gameActive = true;
             editorMode = false; // Disable editor when game starts
             editorPanel.classList.add('hidden');
             toggleEditorBtn.textContent = 'Toggle Editor Mode';
-            setMessageBox("Game started! Click an empty space or gold cell two steps away to jump.");
+            setMessageBox("Game started! First, click a Green (Player) or Blue cell to select it. Then click an empty space or gold cell to jump.");
+            selectedJumpingHex = null; // Clear any previous selection
             drawGrid();
         }
 
         function resetLevel() {
             gameActive = false;
+            selectedJumpingHex = null; // Clear selection on reset
             // Reset to the currently selected level from the dropdown
             initializeGrid(levels[levelSelect.value]);
             setMessageBox("Level reset. Click 'Start Game' to play.");
@@ -844,6 +855,7 @@
             // as its type was never changed.
 
             setMessageBox("Jump successful!");
+            selectedJumpingHex = null; // Clear selection after jump
             drawGrid();
 
             // Check for win condition (only if the player moved to gold)
@@ -887,51 +899,38 @@
                 drawGrid();
                 setMessageBox(`Placed ${selectedCellType} at (${clickedHex.q}, ${clickedHex.r})`);
             } else if (gameActive) {
-                // Game mode: handle jumps (single click for target)
-                if (!playerHex) {
-                    setMessageBox("Player not found on the map. Reset level or add a player in editor mode.", 'error');
-                    return;
-                }
-
-                const targetHex = clickedHex; // The user clicked the intended landing spot
-
-                let foundValidJump = false;
-                let actualJumpingHex = null; // The hex that actually makes the jump (player or blue)
-                let actualOverHex = null;
-                let actualJumpingCellType = null;
-
-                // Iterate through all cells to find a potential jumper (Player or Blue)
-                for (const [key, type] of grid.entries()) {
-                    const currentHex = JSON.parse(key);
-                    if (type === 'PLAYER' || type === 'BLUE') { // Only Player and Blue cells can initiate jumps
-                        // Calculate the potential 'overHex' if 'currentHex' jumps to 'targetHex'
-                        // This is (currentHex + targetHex) / 2
-                        const potentialOverHex = {
-                            q: (currentHex.q + targetHex.q) / 2,
-                            r: (currentHex.r + targetHex.r) / 2
+                // Game mode: handle explicit selection and jumps
+                if (clickedCellType === 'PLAYER' || clickedCellType === 'BLUE') {
+                    // User clicked on a movable cell, so select it
+                    selectedJumpingHex = clickedHex;
+                    setMessageBox(`Selected ${clickedCellType} cell at (${clickedHex.q}, ${clickedHex.r}). Now click an empty space or gold cell to jump.`);
+                } else if (clickedCellType === 'EMPTY' || clickedCellType === 'GOLD') {
+                    // User clicked on a target cell
+                    if (selectedJumpingHex) {
+                        const jumpingCellType = grid.get(JSON.stringify(selectedJumpingHex));
+                        // Calculate the 'overHex' (the cell in between jumpingHex and targetHex)
+                        const overHex = {
+                            q: (selectedJumpingHex.q + clickedHex.q) / 2,
+                            r: (selectedJumpingHex.r + clickedHex.r) / 2
                         };
 
                         // Ensure the calculated overHex is an integer hex coordinate (i.e., collinear)
-                        if (potentialOverHex.q % 1 === 0 && potentialOverHex.r % 1 === 0) {
-                            // Check if currentHex is 1 unit from overHex and 2 units from targetHex
-                            if (hexDistance(currentHex, potentialOverHex) === 1 && hexDistance(currentHex, targetHex) === 2) {
-                                // We found a potential jumping sequence. Now validate it.
-                                if (isValidJump(currentHex, potentialOverHex, targetHex)) {
-                                    actualJumpingHex = currentHex;
-                                    actualOverHex = potentialOverHex;
-                                    actualJumpingCellType = type; // Get the actual type of the cell that is jumping
-                                    foundValidJump = true;
-                                    break; // Found a valid jump, no need to check other cells
-                                }
+                        if (overHex.q % 1 === 0 && overHex.r % 1 === 0) {
+                            if (isValidJump(selectedJumpingHex, overHex, clickedHex)) {
+                                makeJump(selectedJumpingHex, overHex, clickedHex, jumpingCellType);
+                            } else {
+                                // isValidJump already sets specific error message
                             }
+                        } else {
+                            setMessageBox("Invalid jump path. The target is not directly two steps away in a straight line.", 'error');
                         }
+                    } else {
+                        setMessageBox("Please select a Green (Player) or Blue cell to jump first.", 'info');
                     }
-                }
-
-                if (foundValidJump) {
-                    makeJump(actualJumpingHex, actualOverHex, targetHex, actualJumpingCellType);
                 } else {
-                    setMessageBox("Invalid jump. Click an empty space or gold cell two steps away from a movable cell (green or blue).", 'error');
+                    // User clicked on an unselectable cell (Black, Red)
+                    selectedJumpingHex = null; // Clear any previous selection
+                    setMessageBox("Invalid selection. Please click a Green (Player) or Blue cell to start a jump.", 'error');
                 }
                 drawGrid(); // Always redraw after a click in game mode
             } else {
@@ -1003,7 +1002,6 @@
                     if (targetCellType === 'EMPTY') {
                         grid.set(droppedHexKey, draggedCellType);
                     } else {
-                        // If target is not empty, swap them
                         grid.set(droppedHexKey, draggedCellType); // Place dragged cell
                         grid.set(originalHexKey, targetCellType); // Move target cell to original position
                     }
@@ -1174,9 +1172,7 @@
                         grid.set(originalHexKey, targetCellType);
                     }
                     if (draggedCellType === 'PLAYER') playerHex = droppedHex;
-                    if (draggedCellType === 'GOLD') goldHex = droppedHex;
-                    if (targetCellType === 'PLAYER') playerHex = dragOriginalHex;
-                    if (targetCellType === 'GOLD') goldHex = dragOriginalHex;
+                    if (draggedCellType === 'GOLD') goldHex = draggedHex; // Fix: Update goldHex if gold was dragged
                 }
                 draggedHex = null;
                 draggedCellType = null;
@@ -1208,6 +1204,7 @@
                     setMessageBox("Warning: No Player or Gold cell found. Add them in editor mode before playing.", 'error');
                 }
             }
+            selectedJumpingHex = null; // Clear selection when toggling editor
             drawGrid();
         }
 
@@ -1235,6 +1232,7 @@
 
         function handleLoadSelectedLevel() {
             gameActive = false; // Stop game if a new level is loaded
+            selectedJumpingHex = null; // Clear selection on level load
             initializeGrid(); // This will load the selected level from the dropdown
             setMessageBox(`Level '${levelSelect.value}' loaded. Click 'Start Game' to play.`);
         }
@@ -1246,7 +1244,8 @@
                 document.querySelector('.cell-type-btn[data-cell-type="EMPTY"]').classList.add('selected');
                 setMessageBox("Editor: Selected cell type reset to EMPTY.");
             } else if (gameActive) {
-                setMessageBox("Game: Nothing to deselect in single-click jump mode.");
+                selectedJumpingHex = null; // Clear selected jumping hex
+                setMessageBox("Game: Selection cleared. Please select a Green (Player) or Blue cell to jump.", 'info');
             } else {
                 setMessageBox("Nothing to deselect.");
             }
@@ -1256,7 +1255,7 @@
         // --- Initialization and Event Listeners ---
         function setupCanvasSize() {
             const containerWidth = canvas.parentElement.clientWidth;
-            const size = Math.min(containerWidth, 600);
+            const size = Math.min(containerWidth, 600); // Max 600px, or container width
             canvas.width = size;
             canvas.height = size;
             drawGrid();
