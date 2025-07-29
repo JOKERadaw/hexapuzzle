@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hexagonal World Jumping Game</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Dark background */
+            color: #e2e8f0; /* Light text */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .game-container {
+            background-color: #2d3748; /* Slightly lighter dark background for container */
+            border-radius: 1rem; /* Rounded corners */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            max-width: 1200px;
+            width: 100%;
+        }
+        canvas {
+            background-color: #1a202c;
+            border-radius: 0.75rem;
+            border: 2px solid #4a5568;
+            touch-action: none; /* Prevent browser default touch actions like scrolling */
+        }
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            justify-content: center;
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            border: none;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .btn-primary {
+            background-color: #4299e1; /* Blue */
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #3182ce;
+            transform: translateY(-2px);
+        }
+        .btn-secondary {
+            background-color: #a0aec0; /* Gray */
+            color: #2d3748;
+        }
+        .btn-secondary:hover {
+            background-color: #718096;
+            transform: translateY(-2px);
+        }
+        .btn-success {
+            background-color: #48bb78; /* Green */
+            color: white;
+        }
+        .btn-success:hover {
+            background-color: #38a169;
+            transform: translateY(-2px);
+        }
+        .btn-danger {
+            background-color: #ef4444; /* Red */
+            color: white;
+        }
+        .btn-danger:hover {
+            background-color: #dc2626;
+            transform: translateY(-2px);
+        }
+        .cell-type-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 9999px; /* Full circle */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
+        }
+        .cell-type-btn.selected {
+            border-color: #63b3ed; /* Light blue border when selected */
+            transform: scale(1.1);
+        }
+        .message-box {
+            background-color: #2d3748;
+            border: 1px solid #4a5568;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            text-align: center;
+            font-weight: 600;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        textarea {
+            background-color: #1a202c;
+            border: 1px solid #4a5568;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            color: #e2e8f0;
+            resize: vertical;
+            min-height: 100px;
+        }
+        .rules-section {
+            background-color: #2d3748;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem; /* Space below the rules */
+        }
+        .rules-section h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #blue-300;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        .rules-section ul {
+            list-style: disc;
+            margin-left: 1.25rem;
+            margin-bottom: 1rem;
+        }
+        .rules-section li {
+            margin-bottom: 0.5rem;
+        }
+        .rules-section p {
+            margin-bottom: 0.75rem;
+        }
+        select {
+            background-color: #1a202c;
+            border: 1px solid #4a5568;
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            color: #e2e8f0;
+            font-weight: 600;
+            width: 100%;
+            appearance: none; /* Remove default dropdown arrow */
+            background-image: url('data:image/svg+xml;utf8,<svg fill="%23e2e8f0" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 1.5em;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 flex items-center justify-center min-h-screen p-5">
+    <div class="game-container">
+        <h1 class="text-3xl font-bold text-center mb-4 text-blue-400">Hexagonal World Jumping Game</h1>
+
+        <div class="message-box" id="messageBox">Welcome! Read the rules, click 'Start Game' or design your level.</div>
+
+        <!-- Game Rules Section -->
+        <div class="rules-section">
+            <h2 class="text-blue-300">Game Rules</h2>
+            <p><strong>Objective:</strong> Navigate your player (green cell) to reach the gold cell and complete the level.</p>
+            <h3 class="text-lg font-medium mb-2 text-gray-200">Game Elements:</h3>
+            <ul>
+                <li>🟢 <strong>Green Cell</strong> - Your player character (<strong>movable in editor</strong>)</li>
+                <li>🔵 <strong>Blue Cells</strong> - Jumpable cells that you can leap over. They can also **initiate jumps** themselves. (<strong>movable in editor</strong>)</li>
+                <li>⚫ <strong>Black Cells</strong> - Immovable obstacles you can jump over but cannot move (immovable in editor)</li>
+                <li>🔴 <strong>Red Cells</strong> - Enemies that block jumps completely (immovable in editor)</li>
+                <li>🟡 <strong>Gold Cell</strong> - Your target destination to win the level (immovable in editor)</li>
+            </ul>
+            <h3 class="text-lg font-medium mb-2 text-gray-200">Movement Rules:</h3>
+            <ul>
+                <li>You can <strong>ONLY</strong> move by jumping - no regular movement allowed.</li>
+                <li><strong>Jump Mechanism:</strong> Click on an empty space or the gold cell that is two steps away from a **Green** or **Blue** cell. The game will deduce which cell is jumping.</li>
+                <li><strong>Jump Requirements:</strong>
+                    <ul>
+                        <li>You can jump over <strong>BLUE</strong> cells (they stay in place).</li>
+                        <li>You can jump over <strong>BLACK</strong> cells (they cannot be moved but don't block jumps).</li>
+                        <li>You can jump over <strong>GREEN</strong> cells (they stay in place).</li>
+                        <li>You <strong>CANNOT</strong> jump over <strong>RED</strong> cells (enemies block all movement).</li>
+                        <li>You must land on an empty space or the gold goal.</li>
+                    </ul>
+                </li>
+            </ul>
+            <p><strong>Victory Condition:</strong> Successfully land on the gold cell to complete the level!</p>
+        </div>
+
+        <div class="flex flex-col md:flex-row gap-4">
+            <div class="flex-grow">
+                <canvas id="gameCanvas"></canvas>
+            </div>
+
+            <div class="flex-shrink-0 w-full md:w-80 flex flex-col gap-4">
+                <!-- Level Selection -->
+                <div class="p-4 bg-gray-700 rounded-lg shadow-md">
+                    <h2 class="text-xl font-semibold mb-3 text-blue-300">Level Selection</h2>
+                    <select id="levelSelect" class="mb-3">
+                        <option value="level1">Level 1</option>
+                        <option value="level2">Level 2</option>
+                        <option value="level3">Level 3</option>
+                        <option value="level4">Level 4</option>
+                    </select>
+                    <button id="loadSelectedLevelBtn" class="btn btn-primary w-full">Load Selected Level</button>
+                </div>
+
+                <!-- Game Controls -->
+                <div class="p-4 bg-gray-700 rounded-lg shadow-md">
+                    <h2 class="text-xl font-semibold mb-3 text-blue-300">Game Controls</h2>
+                    <div class="button-group">
+                        <button id="startGameBtn" class="btn btn-success w-full">Start Game</button>
+                        <button id="resetLevelBtn" class="btn btn-secondary w-full">Reset Level</button>
+                        <button id="deselectBtn" class="btn btn-secondary w-full">Deselect</button>
+                    </div>
+                </div>
+
+                <!-- Editor Controls -->
+                <div class="p-4 bg-gray-700 rounded-lg shadow-md">
+                    <h2 class="text-xl font-semibold mb-3 text-blue-300">Editor Controls</h2>
+                    <div class="button-group mb-4">
+                        <button id="toggleEditorBtn" class="btn btn-primary w-full">Toggle Editor Mode</button>
+                    </div>
+                    <div id="editorPanel" class="hidden">
+                        <h3 class="text-lg font-medium mb-2 text-gray-200">Select Cell Type:</h3>
+                        <div class="button-group mb-4">
+                            <button class="cell-type-btn bg-gray-800 text-white" data-cell-type="EMPTY">E</button>
+                            <button class="cell-type-btn bg-green-500 text-white" data-cell-type="PLAYER">P</button>
+                            <button class="cell-type-btn bg-blue-500 text-white" data-cell-type="BLUE">B</button>
+                            <button class="cell-type-btn bg-gray-900 text-white" data-cell-type="BLACK">K</button>
+                            <button class="cell-type-btn bg-red-500 text-white" data-cell-type="RED">R</button>
+                            <button class="cell-type-btn bg-yellow-500 text-white" data-cell-type="GOLD">G</button>
+                        </div>
+                        <h3 class="text-lg font-medium mb-2 text-gray-200">Map Data:</h3>
+                        <textarea id="mapDataTextarea" class="w-full mb-3"></textarea>
+                        <div class="button-group">
+                            <button id="loadMapBtn" class="btn btn-primary w-full">Load Map</button>
+                            <button id="saveMapBtn" class="btn btn-secondary w-full">Save Map</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Canvas and Context
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game State Variables
+        let hexRadius = 30; // Radius of each hexagon
+        // For pointy-top hexagons, these are the dimensions related to the radius
+        let hexWidth = hexRadius * Math.sqrt(3); // Distance between flat sides (pointy-top)
+        let hexHeight = hexRadius * 2;         // Distance between pointy ends (pointy-top)
+
+        let grid = new Map(); // Stores cell types: Map<string (q,r key), string (cell type)>
+        let playerHex = null; // {q, r} coordinates of the player
+        let goldHex = null;   // {q, r} coordinates of the gold cell
+        let gameActive = false;
+        let editorMode = false;
+        let selectedCellType = 'EMPTY'; // For editor mode
+
+        // Panning and Zooming variables
+        let offsetX = 0;
+        let offsetY = 0;
+        let scale = 1.0;
+        let isPanning = false;
+        let lastPanX = 0;
+        let lastPanY = 0;
+        const MIN_SCALE = 0.5;
+        const MAX_SCALE = 3.0;
+
+        // Drag and Drop variables (for editor mode)
+        let isDragging = false;
+        let draggedHex = null;
+        let draggedCellType = null;
+        let dragOriginalHex = null;
+
+        // UI Elements
+        const messageBox = document.getElementById('messageBox');
+        const startGameBtn = document.getElementById('startGameBtn');
+        const resetLevelBtn = document.getElementById('resetLevelBtn');
+        const deselectBtn = document.getElementById('deselectBtn'); // New deselect button
+        const toggleEditorBtn = document.getElementById('toggleEditorBtn');
+        const editorPanel = document.getElementById('editorPanel');
+        const mapDataTextarea = document.getElementById('mapDataTextarea');
+        const loadMapBtn = document.getElementById('loadMapBtn');
+        const saveMapBtn = document.getElementById('saveMapBtn');
+        const cellTypeButtons = document.querySelectorAll('.cell-type-btn');
+        const levelSelect = document.getElementById('levelSelect'); // New level select dropdown
+        const loadSelectedLevelBtn = document.getElementById('loadSelectedLevelBtn'); // New load level button
+
+        // Predefined Levels
+        const levels = {
+            level1: {
+                "{\"q\":0,\"r\":0}": "EMPTY",
+                "{\"q\":1,\"r\":0}": "EMPTY",
+                "{\"q\":2,\"r\":0}": "EMPTY",
+                "{\"q\":0,\"r\":1}": "EMPTY",
+                "{\"q\":1,\"r\":1}": "EMPTY",
+                "{\"q\":2,\"r\":1}": "EMPTY",
+                "{\"q\":-1,\"r\":0}": "GOLD",
+                "{\"q\":-2,\"r\":0}": "EMPTY",
+                "{\"q\":0,\"r\":-1}": "EMPTY",
+                "{\"q\":1,\"r\":-1}": "EMPTY",
+                "{\"q\":-1,\"r\":-1}": "EMPTY",
+                "{\"q\":-1,\"r\":1}": "BLACK",
+                "{\"q\":-2,\"r\":1}": "EMPTY",
+                "{\"q\":-2,\"r\":2}": "EMPTY",
+                "{\"q\":-1,\"r\":2}": "PLAYER",
+                "{\"q\":0,\"r\":2}": "EMPTY",
+                "{\"q\":1,\"r\":2}": "EMPTY",
+                "{\"q\":0,\"r\":3}": "EMPTY",
+                "{\"q\":-1,\"r\":4}": "EMPTY",
+                "{\"q\":-2,\"r\":3}": "EMPTY",
+                "{\"q\":-1,\"r\":3}": "EMPTY",
+                "{\"q\":-2,\"r\":4}": "EMPTY",
+                "{\"q\":-3,\"r\":3}": "EMPTY",
+                "{\"q\":-3,\"r\":4}": "EMPTY",
+                "{\"q\":-3,\"r\":2}": "EMPTY",
+                "{\"q\":-4,\"r\":4}": "EMPTY",
+                "{\"q\":-4,\"r\":2}": "EMPTY",
+                "{\"q\":-4,\"r\":3}": "EMPTY",
+                "{\"q\":-3,\"r\":1}": "EMPTY",
+                "{\"q\":-4,\"r\":1}": "EMPTY",
+                "{\"q\":-3,\"r\":0}": "EMPTY",
+                "{\"q\":-2,\"r\":-1}": "EMPTY",
+                "{\"q\":-1,\"r\":-2}": "EMPTY",
+                "{\"q\":0,\"r\":-2}": "EMPTY",
+                "{\"q\":1,\"r\":-2}": "EMPTY",
+                "{\"q\":2,\"r\":-2}": "EMPTY",
+                "{\"q\":2,\"r\":-1}": "EMPTY"
+            },
+            level2: {
+                "{\"q\":0,\"r\":0}": "EMPTY",
+                "{\"q\":1,\"r\":0}": "PLAYER",
+                "{\"q\":2,\"r\":0}": "EMPTY",
+                "{\"q\":0,\"r\":1}": "BLACK",
+                "{\"q\":1,\"r\":1}": "EMPTY",
+                "{\"q\":2,\"r\":1}": "EMPTY",
+                "{\"q\":-1,\"r\":0}": "GOLD",
+                "{\"q\":-2,\"r\":0}": "EMPTY",
+                "{\"q\":0,\"r\":-1}": "EMPTY",
+                "{\"q\":1,\"r\":-1}": "EMPTY",
+                "{\"q\":-1,\"r\":-1}": "EMPTY",
+                "{\"q\":-1,\"r\":1}": "BLACK",
+                "{\"q\":-2,\"r\":1}": "EMPTY",
+                "{\"q\":-2,\"r\":2}": "EMPTY",
+                "{\"q\":-1,\"r\":2}": "EMPTY",
+                "{\"q\":0,\"r\":2}": "EMPTY",
+                "{\"q\":1,\"r\":2}": "EMPTY",
+                "{\"q\":0,\"r\":3}": "EMPTY",
+                "{\"q\":-1,\"r\":4}": "EMPTY",
+                "{\"q\":-2,\"r\":3}": "EMPTY",
+                "{\"q\":-1,\"r\":3}": "EMPTY",
+                "{\"q\":-2,\"r\":4}": "EMPTY",
+                "{\"q\":-3,\"r\":3}": "EMPTY",
+                "{\"q\":-3,\"r\":4}": "EMPTY",
+                "{\"q\":-3,\"r\":2}": "EMPTY",
+                "{\"q\":-4,\"r\":4}": "EMPTY",
+                "{\"q\":-4,\"r\":2}": "EMPTY",
+                "{\"q\":-4,\"r\":3}": "EMPTY",
+                "{\"q\":-3,\"r\":1}": "EMPTY",
+                "{\"q\":-4,\"r\":1}": "EMPTY",
+                "{\"q\":-3,\"r\":0}": "EMPTY",
+                "{\"q\":-2,\"r\":-1}": "EMPTY",
+                "{\"q\":-1,\"r\":-2}": "EMPTY",
+                "{\"q\":0,\"r\":-2}": "EMPTY",
+                "{\"q\":1,\"r\":-2}": "EMPTY",
+                "{\"q\":2,\"r\":-2}": "EMPTY",
+                "{\"q\":2,\"r\":-1}": "EMPTY"
+            },
+            level3: {
+                "{\"q\":0,\"r\":0}": "EMPTY",
+                "{\"q\":1,\"r\":0}": "EMPTY",
+                "{\"q\":2,\"r\":0}": "EMPTY",
+                "{\"q\":0,\"r\":1}": "EMPTY",
+                "{\"q\":1,\"r\":1}": "EMPTY",
+                "{\"q\":2,\"r\":1}": "EMPTY",
+                "{\"q\":-1,\"r\":0}": "GOLD",
+                "{\"q\":-2,\"r\":0}": "BLACK",
+                "{\"q\":0,\"r\":-1}": "EMPTY",
+                "{\"q\":1,\"r\":-1}": "EMPTY",
+                "{\"q\":-1,\"r\":-1}": "EMPTY",
+                "{\"q\":-1,\"r\":1}": "EMPTY",
+                "{\"q\":-2,\"r\":1}": "EMPTY",
+                "{\"q\":-2,\"r\":2}": "EMPTY",
+                "{\"q\":-1,\"r\":2}": "EMPTY",
+                "{\"q\":0,\"r\":2}": "EMPTY",
+                "{\"q\":1,\"r\":2}": "EMPTY",
+                "{\"q\":0,\"r\":3}": "EMPTY",
+                "{\"q\":-1,\"r\":4}": "EMPTY",
+                "{\"q\":-2,\"r\":3}": "BLACK",
+                "{\"q\":-1,\"r\":3}": "BLACK",
+                "{\"q\":-2,\"r\":4}": "EMPTY",
+                "{\"q\":-3,\"r\":3}": "BLACK",
+                "{\"q\":-3,\"r\":4}": "EMPTY",
+                "{\"q\":-3,\"r\":2}": "EMPTY",
+                "{\"q\":-4,\"r\":4}": "EMPTY",
+                "{\"q\":-4,\"r\":2}": "EMPTY",
+                "{\"q\":-4,\"r\":3}": "EMPTY",
+                "{\"q\":-3,\"r\":1}": "EMPTY",
+                "{\"q\":-4,\"r\":1}": "EMPTY",
+                "{\"q\":-3,\"r\":0}": "EMPTY",
+                "{\"q\":-2,\"r\":-1}": "BLUE",
+                "{\"q\":-1,\"r\":-2}": "EMPTY",
+                "{\"q\":0,\"r\":-2}": "EMPTY",
+                "{\"q\":1,\"r\":-2}": "EMPTY",
+                "{\"q\":2,\"r\":-2}": "EMPTY",
+                "{\"q\":2,\"r\":-1}": "EMPTY",
+                "{\"q\":-1,\"r\":5}": "EMPTY",
+                "{\"q\":0,\"r\":4}": "EMPTY",
+                "{\"q\":1,\"r\":3}": "EMPTY",
+                "{\"q\":2,\"r\":2}": "EMPTY",
+                "{\"q\":-2,\"r\":5}": "EMPTY",
+                "{\"q\":-3,\"r\":5}": "EMPTY",
+                "{\"q\":-4,\"r\":5}": "EMPTY",
+                "{\"q\":-5,\"r\":5}": "EMPTY",
+                "{\"q\":-5,\"r\":4}": "EMPTY",
+                "{\"q\":-5,\"r\":3}": "EMPTY",
+                "{\"q\":-5,\"r\":2}": "EMPTY",
+                "{\"q\":0,\"r\":5}": "BLACK",
+                "{\"q\":1,\"r\":4}": "EMPTY",
+                "{\"q\":2,\"r\":3}": "EMPTY",
+                "{\"q\":3,\"r\":2}": "EMPTY",
+                "{\"q\":3,\"r\":0}": "EMPTY",
+                "{\"q\":3,\"r\":1}": "EMPTY",
+                "{\"q\":3,\"r\":-1}": "EMPTY",
+                "{\"q\":3,\"r\":-2}": "EMPTY",
+                "{\"q\":-3,\"r\":6}": "EMPTY",
+                "{\"q\":-4,\"r\":6}": "EMPTY",
+                "{\"q\":-2,\"r\":6}": "EMPTY",
+                "{\"q\":-5,\"r\":6}": "EMPTY",
+                "{\"q\":-1,\"r\":6}": "PLAYER",
+                "{\"q\":0,\"r\":6}": "EMPTY",
+                "{\"q\":1,\"r\":5}": "BLUE",
+                "{\"q\":2,\"r\":4}": "EMPTY",
+                "{\"q\":3,\"r\":3}": "EMPTY",
+                "{\"q\":-2,\"r\":-2}": "EMPTY",
+                "{\"q\":-3,\"r\":-1}": "EMPTY",
+                "{\"q\":-4,\"r\":0}": "EMPTY",
+                "{\"q\":-5,\"r\":1}": "EMPTY"
+            },
+            level4: {
+                "{\"q\":0,\"r\":0}": "EMPTY",
+                "{\"q\":1,\"r\":0}": "EMPTY",
+                "{\"q\":2,\"r\":0}": "EMPTY",
+                "{\"q\":0,\"r\":1}": "EMPTY",
+                "{\"q\":1,\"r\":1}": "EMPTY",
+                "{\"q\":2,\"r\":1}": "RED",
+                "{\"q\":-1,\"r\":0}": "EMPTY",
+                "{\"q\":-2,\"r\":0}": "EMPTY",
+                "{\"q\":0,\"r\":-1}": "EMPTY",
+                "{\"q\":1,\"r\":-1}": "EMPTY",
+                "{\"q\":-1,\"r\":-1}": "EMPTY",
+                "{\"q\":-1,\"r\":1}": "EMPTY",
+                "{\"q\":-2,\"r\":1}": "RED",
+                "{\"q\":-2,\"r\":2}": "EMPTY",
+                "{\"q\":-1,\"r\":2}": "EMPTY",
+                "{\"q\":0,\"r\":2}": "EMPTY",
+                "{\"q\":1,\"r\":2}": "RED",
+                "{\"q\":0,\"r\":3}": "RED",
+                "{\"q\":-1,\"r\":4}": "EMPTY",
+                "{\"q\":-2,\"r\":3}": "EMPTY",
+                "{\"q\":-1,\"r\":3}": "BLACK",
+                "{\"q\":-2,\"r\":4}": "EMPTY",
+                "{\"q\":-3,\"r\":3}": "EMPTY",
+                "{\"q\":-3,\"r\":4}": "BLACK",
+                "{\"q\":-3,\"r\":2}": "RED",
+                "{\"q\":-4,\"r\":4}": "EMPTY",
+                "{\"q\":-4,\"r\":2}": "RED",
+                "{\"q\":-4,\"r\":3}": "EMPTY",
+                "{\"q\":-3,\"r\":1}": "EMPTY",
+                "{\"q\":-4,\"r\":1}": "EMPTY",
+                "{\"q\":-3,\"r\":0}": "EMPTY",
+                "{\"q\":-2,\"r\":-1}": "EMPTY",
+                "{\"q\":-1,\"r\":-2}": "EMPTY",
+                "{\"q\":0,\"r\":-2}": "EMPTY",
+                "{\"q\":1,\"r\":-2}": "EMPTY",
+                "{\"q\":2,\"r\":-2}": "EMPTY",
+                "{\"q\":2,\"r\":-1}": "EMPTY",
+                "{\"q\":-1,\"r\":5}": "EMPTY",
+                "{\"q\":0,\"r\":4}": "RED",
+                "{\"q\":1,\"r\":3}": "EMPTY",
+                "{\"q\":2,\"r\":2}": "EMPTY",
+                "{\"q\":-2,\"r\":5}": "EMPTY",
+                "{\"q\":-3,\"r\":5}": "EMPTY",
+                "{\"q\":-4,\"r\":5}": "EMPTY",
+                "{\"q\":-5,\"r\":5}": "EMPTY",
+                "{\"q\":-5,\"r\":4}": "EMPTY",
+                "{\"q\":-5,\"r\":3}": "RED",
+                "{\"q\":-5,\"r\":2}": "EMPTY",
+                "{\"q\":0,\"r\":5}": "EMPTY",
+                "{\"q\":1,\"r\":4}": "EMPTY",
+                "{\"q\":2,\"r\":3}": "EMPTY",
+                "{\"q\":3,\"r\":2}": "EMPTY",
+                "{\"q\":3,\"r\":0}": "RED",
+                "{\"q\":3,\"r\":1}": "EMPTY",
+                "{\"q\":3,\"r\":-1}": "RED",
+                "{\"q\":3,\"r\":-2}": "EMPTY",
+                "{\"q\":-3,\"r\":6}": "RED",
+                "{\"q\":-4,\"r\":6}": "EMPTY",
+                "{\"q\":-2,\"r\":6}": "EMPTY",
+                "{\"q\":-5,\"r\":6}": "EMPTY",
+                "{\"q\":-1,\"r\":6}": "EMPTY",
+                "{\"q\":0,\"r\":6}": "EMPTY",
+                "{\"q\":1,\"r\":5}": "EMPTY",
+                "{\"q\":2,\"r\":4}": "EMPTY",
+                "{\"q\":3,\"r\":3}": "BLUE",
+                "{\"q\":-2,\"r\":-2}": "EMPTY",
+                "{\"q\":-3,\"r\":-1}": "EMPTY",
+                "{\"q\":-4,\"r\":0}": "EMPTY",
+                "{\"q\":-5,\"r\":1}": "EMPTY",
+                "{\"q\":-6,\"r\":6}": "RED",
+                "{\"q\":-6,\"r\":5}": "RED",
+                "{\"q\":-7,\"r\":6}": "EMPTY",
+                "{\"q\":-7,\"r\":5}": "EMPTY",
+                "{\"q\":-6,\"r\":4}": "RED",
+                "{\"q\":-7,\"r\":4}": "EMPTY",
+                "{\"q\":-6,\"r\":3}": "EMPTY",
+                "{\"q\":-7,\"r\":3}": "EMPTY",
+                "{\"q\":-6,\"r\":2}": "EMPTY",
+                "{\"q\":-7,\"r\":2}": "GOLD",
+                "{\"q\":-6,\"r\":1}": "EMPTY",
+                "{\"q\":-5,\"r\":0}": "EMPTY",
+                "{\"q\":-4,\"r\":-1}": "EMPTY",
+                "{\"q\":-3,\"r\":-2}": "EMPTY",
+                "{\"q\":4,\"r\":-2}": "RED",
+                "{\"q\":4,\"r\":-1}": "EMPTY",
+                "{\"q\":4,\"r\":0}": "EMPTY",
+                "{\"q\":4,\"r\":1}": "EMPTY",
+                "{\"q\":4,\"r\":2}": "BLUE",
+                "{\"q\":1,\"r\":6}": "EMPTY",
+                "{\"q\":2,\"r\":5}": "EMPTY",
+                "{\"q\":3,\"r\":4}": "EMPTY",
+                "{\"q\":4,\"r\":3}": "BLUE",
+                "{\"q\":5,\"r\":2}": "PLAYER",
+                "{\"q\":5,\"r\":1}": "EMPTY",
+                "{\"q\":5,\"r\":0}": "EMPTY",
+                "{\"q\":5,\"r\":-1}": "EMPTY",
+                "{\"q\":5,\"r\":-2}": "EMPTY",
+                "{\"q\":-3,\"r\":7}": "EMPTY",
+                "{\"q\":-2,\"r\":7}": "EMPTY",
+                "{\"q\":-1,\"r\":7}": "EMPTY",
+                "{\"q\":-4,\"r\":8}": "RED",
+                "{\"q\":-3,\"r\":8}": "EMPTY",
+                "{\"q\":-5,\"r\":9}": "EMPTY",
+                "{\"q\":-4,\"r\":9}": "EMPTY",
+                "{\"q\":-6,\"r\":9}": "EMPTY",
+                "{\"q\":-7,\"r\":9}": "EMPTY",
+                "{\"q\":-8,\"r\":9}": "EMPTY",
+                "{\"q\":-9,\"r\":9}": "EMPTY",
+                "{\"q\":-9,\"r\":8}": "EMPTY",
+                "{\"q\":-9,\"r\":7}": "EMPTY",
+                "{\"q\":-9,\"r\":6}": "EMPTY",
+                "{\"q\":-9,\"r\":5}": "EMPTY",
+                "{\"q\":-9,\"r\":4}": "EMPTY",
+                "{\"q\":-8,\"r\":3}": "EMPTY",
+                "{\"q\":-8,\"r\":4}": "EMPTY",
+                "{\"q\":-8,\"r\":5}": "EMPTY",
+                "{\"q\":-8,\"r\":6}": "EMPTY",
+                "{\"q\":-8,\"r\":7}": "EMPTY",
+                "{\"q\":-8,\"r\":8}": "EMPTY",
+                "{\"q\":-7,\"r\":7}": "EMPTY",
+                "{\"q\":-7,\"r\":8}": "EMPTY",
+                "{\"q\":-6,\"r\":7}": "EMPTY",
+                "{\"q\":-6,\"r\":8}": "EMPTY",
+                "{\"q\":-5,\"r\":7}": "RED",
+                "{\"q\":-5,\"r\":8}": "EMPTY",
+                "{\"q\":-4,\"r\":7}": "EMPTY"
+            }
+        };
+
+        // --- Hexagonal Grid Utility Functions ---
+
+        // Convert axial (q, r) to pixel coordinates (x, y) for POINTY-TOP hexagons
+        function hexToPixel(q, r) {
+            const x = hexRadius * (Math.sqrt(3) * q + Math.sqrt(3)/2 * r);
+            const y = hexRadius * (3/2 * r);
+            return { x, y };
+        }
+
+        // Convert pixel coordinates (x, y) to axial (q, r) for POINTY-TOP hexagons
+        function pixelToHex(x, y) {
+            const q = (x * Math.sqrt(3)/3 - y / 3) / hexRadius;
+            const r = (y * 2/3) / hexRadius;
+            return hexRound(q, r, -q - r);
+        }
+
+        // Round floating point hex coordinates to nearest integer hex coordinates (cube coordinates then back to axial)
+        function hexRound(q, r, s) {
+            let rx = Math.round(q);
+            let ry = Math.round(r);
+            let rz = Math.round(s);
+
+            const x_diff = Math.abs(rx - q);
+            const y_diff = Math.abs(ry - r);
+            const z_diff = Math.abs(rz - s);
+
+            if (x_diff > y_diff && x_diff > z_diff) {
+                rx = -ry - rz;
+            } else if (y_diff > z_diff) {
+                ry = -rx - rz;
+            } else {
+                rz = -rx - ry;
+            }
+            return { q: rx, r: ry };
+        }
+
+        // Calculate the distance between two hexes
+        function hexDistance(hex1, hex2) {
+            return (Math.abs(hex1.q - hex2.q) + Math.abs(hex1.r - hex2.r) + Math.abs(hex1.q + hex1.r - hex2.q - hex2.r)) / 2;
+        }
+
+        // --- Drawing Functions ---
+
+        function drawHexagon(q, r, color, borderColor = '#4a5568', borderWidth = 2) {
+            const { x, y } = hexToPixel(q, r);
+            const centerX = x;
+            const centerY = y;
+
+            ctx.beginPath();
+            // Start angle for pointy-top hexagons is PI/6 (30 degrees)
+            for (let i = 0; i < 6; i++) {
+                const angle = Math.PI / 3 * i + Math.PI / 6; // Add 30 degrees for pointy top
+                const vertexX = centerX + hexRadius * Math.cos(angle);
+                const vertexY = centerY + hexRadius * Math.sin(angle);
+                if (i === 0) {
+                    ctx.moveTo(vertexX, vertexY);
+                } else {
+                    ctx.lineTo(vertexX, vertexY);
+                }
+            }
+            ctx.closePath();
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.strokeStyle = borderColor;
+            ctx.lineWidth = borderWidth;
+            ctx.stroke();
+        }
+
+        function drawGrid() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save(); // Save the current canvas state (before transformations)
+
+            // Apply transformations for panning and zooming
+            ctx.translate(canvas.width / 2, canvas.height / 2); // Translate to canvas center
+            ctx.translate(offsetX, offsetY); // Apply pan offset
+            ctx.scale(scale, scale); // Apply zoom scale
+
+            // Draw all cells
+            grid.forEach((type, key) => {
+                const { q, r } = JSON.parse(key); // Parse the key back to object
+                let color;
+                switch (type) {
+                    case 'EMPTY': color = '#1a202c'; break; // Dark background for empty cells
+                    case 'PLAYER': color = '#10b981'; break; // Green
+                    case 'BLUE': color = '#3b82f6'; break;  // Blue
+                    case 'BLACK': color = '#000000'; break; // Black
+                    case 'RED': color = '#ef4444'; break;   // Red
+                    case 'GOLD': color = '#facc15'; break;  // Gold
+                    default: color = '#1a202c';
+                }
+                drawHexagon(q, r, color);
+            });
+
+            // Highlight player in game mode
+            if (gameActive && playerHex) {
+                 drawHexagon(playerHex.q, playerHex.r, '#10b981', '#63b3ed', 3 / scale); // Border scales inversely with zoom
+            }
+
+            // Highlight dragged hex in editor mode
+            if (editorMode && isDragging && draggedHex) {
+                drawHexagon(draggedHex.q, draggedHex.r, 'rgba(255, 255, 255, 0.5)', '#63b3ed', 3 / scale); // Semi-transparent white
+            }
+
+            ctx.restore(); // Restore the canvas state (undo transformations)
+        }
+
+        // --- Game Logic ---
+
+        function setMessageBox(message, type = 'info') {
+            messageBox.textContent = message;
+            messageBox.className = 'message-box'; // Reset classes
+            if (type === 'error') {
+                messageBox.classList.add('bg-red-800', 'text-red-100');
+            } else if (type === 'success') {
+                messageBox.classList.add('bg-green-800', 'text-green-100');
+            } else {
+                messageBox.classList.add('bg-gray-700', 'text-gray-100');
+            }
+        }
+
+        function initializeGrid(levelData = null) {
+            grid.clear();
+            playerHex = null;
+            goldHex = null;
+
+            let mapToLoad = levelData;
+
+            // If no specific level data is provided, try to load from levelSelect or default
+            if (!mapToLoad) {
+                const selectedLevelName = levelSelect.value;
+                mapToLoad = levels[selectedLevelName];
+                if (!mapToLoad) {
+                    setMessageBox(`Error: Level '${selectedLevelName}' not found. Loading default.`, 'error');
+                    createDefaultGrid();
+                    return;
+                }
+            }
+
+            try {
+                // mapToLoad might be a string (from textarea) or an object (from levels)
+                const parsedMap = typeof mapToLoad === 'string' ? JSON.parse(mapToLoad) : mapToLoad;
+
+                for (const key in parsedMap) {
+                    const { q, r } = JSON.parse(key);
+                    const type = parsedMap[key];
+                    grid.set(JSON.stringify({ q, r }), type);
+                    if (type === 'PLAYER') playerHex = { q, r };
+                    if (type === 'GOLD') goldHex = { q, r };
+                }
+                if (!playerHex || !goldHex) {
+                    throw new Error("Map must contain both a player and a gold cell.");
+                }
+            } catch (e) {
+                setMessageBox(`Error loading map: ${e.message}. Loading default.`, 'error');
+                createDefaultGrid();
+            }
+            drawGrid();
+        }
+
+        function createDefaultGrid() {
+            // Create a small default grid
+            const defaultCells = [
+                { q: 0, r: 0, type: 'PLAYER' },
+                { q: 1, r: 0, type: 'BLUE' },
+                { q: 2, r: 0, type: 'EMPTY' },
+                { q: 0, r: 1, type: 'BLUE' },
+                { q: 1, r: 1, type: 'RED' },
+                { q: 2, r: 1, type: 'EMPTY' },
+                { q: -1, r: 0, type: 'GOLD' },
+                { q: -2, r: 0, type: 'EMPTY' },
+                { q: 0, r: -1, type: 'BLACK' },
+                { q: 1, r: -1, type: 'EMPTY' },
+                { q: -1, r: -1, type: 'EMPTY' },
+            ];
+            grid.clear(); // Clear existing grid before populating default
+            defaultCells.forEach(cell => {
+                grid.set(JSON.stringify({ q: cell.q, r: cell.r }), cell.type);
+                if (cell.type === 'PLAYER') playerHex = { q: cell.q, r: cell.r };
+                if (cell.type === 'GOLD') goldHex = { q: cell.q, r: cell.r };
+            });
+        }
+
+
+        function startGame() {
+            if (!playerHex || !goldHex) {
+                setMessageBox("Error: Map must contain both a Player (P) and a Gold (G) cell to start the game.", 'error');
+                return;
+            }
+            gameActive = true;
+            editorMode = false; // Disable editor when game starts
+            editorPanel.classList.add('hidden');
+            toggleEditorBtn.textContent = 'Toggle Editor Mode';
+            setMessageBox("Game started! Click an empty space or gold cell two steps away to jump.");
+            drawGrid();
+        }
+
+        function resetLevel() {
+            gameActive = false;
+            // Reset to the currently selected level from the dropdown
+            initializeGrid(levels[levelSelect.value]);
+            setMessageBox("Level reset. Click 'Start Game' to play.");
+        }
+
+        // isValidJump now takes the cell that is attempting to jump
+        function isValidJump(jumpingCell, overHex, targetHex) {
+            // 1. Check if 'overHex' is adjacent to 'jumpingCell'
+            if (hexDistance(jumpingCell, overHex) !== 1) {
+                setMessageBox("Internal error: Over cell is not adjacent to jumping cell.", 'error');
+                return false;
+            }
+
+            // 2. Check if 'targetHex' is exactly 2 units away from 'jumpingCell'
+            if (hexDistance(jumpingCell, targetHex) !== 2) {
+                setMessageBox("Internal error: Target is not two steps away from jumping cell.", 'error');
+                return false;
+            }
+
+            const overHexKey = JSON.stringify(overHex);
+            const targetHexKey = JSON.stringify(targetHex);
+
+            const overCellType = grid.get(overHexKey);
+            const targetCellType = grid.get(targetHexKey);
+
+            // 3. Check 'overHex' type
+            if (overCellType === 'RED') {
+                setMessageBox("Cannot jump over a RED enemy cell!", 'error');
+                return false;
+            }
+            // Blue, Black, and now PLAYER cells are jumpable over
+            if (overCellType !== 'BLUE' && overCellType !== 'BLACK' && overCellType !== 'PLAYER') {
+                setMessageBox("You can only jump over BLUE, BLACK, or GREEN (Player) cells.", 'error');
+                return false;
+            }
+
+            // 4. Check 'targetHex' type
+            if (targetCellType !== 'EMPTY' && targetCellType !== 'GOLD') {
+                setMessageBox("You must land on an EMPTY space or the GOLD goal.", 'error');
+                return false;
+            }
+
+            return true;
+        }
+
+        // makeJump now takes the type of the cell that is jumping
+        function makeJump(jumpingHex, overHex, targetHex, jumpingCellType) {
+            // Clear jumping cell from old position
+            grid.set(JSON.stringify(jumpingHex), 'EMPTY');
+
+            // Move jumping cell to new position
+            grid.set(JSON.stringify(targetHex), jumpingCellType);
+
+            // If the jumping cell was the player, update playerHex reference
+            if (jumpingCellType === 'PLAYER') {
+                playerHex = targetHex;
+            }
+            // IMPORTANT: The overHex type remains unchanged.
+            // No need to explicitly set grid.set(JSON.stringify(overHex), originalOverCellType);
+            // as its type was never changed.
+
+            setMessageBox("Jump successful!");
+            drawGrid();
+
+            // Check for win condition (only if the player moved to gold)
+            if (playerHex && goldHex && playerHex.q === goldHex.q && playerHex.r === goldHex.r) {
+                setMessageBox("Congratulations! You reached the GOLD cell!", 'success');
+                gameActive = false; // End game
+            }
+        }
+
+        // --- Event Handlers ---
+
+        function getAdjustedMouseCoords(event) {
+            const rect = canvas.getBoundingClientRect();
+            // Adjust for canvas center, pan, and zoom
+            const clientX = event.clientX;
+            const clientY = event.clientY;
+
+            const x = (clientX - rect.left - canvas.width / 2 - offsetX) / scale;
+            const y = (clientY - rect.top - canvas.height / 2 - offsetY) / scale;
+            return { x, y };
+        }
+
+        function handleCanvasClick(event) {
+            if (isPanning || isDragging) return; // Prevent click if panning or dragging
+
+            const { x, y } = getAdjustedMouseCoords(event);
+            const clickedHex = pixelToHex(x, y);
+            const clickedHexKey = JSON.stringify(clickedHex);
+            const clickedCellType = grid.get(clickedHexKey);
+
+            if (editorMode) {
+                // Editor mode: place or select cell
+                if (selectedCellType === 'PLAYER') {
+                    if (playerHex) grid.set(JSON.stringify(playerHex), 'EMPTY');
+                    playerHex = clickedHex;
+                } else if (selectedCellType === 'GOLD') {
+                    if (goldHex) grid.set(JSON.stringify(goldHex), 'EMPTY');
+                    goldHex = clickedHex;
+                }
+                grid.set(clickedHexKey, selectedCellType);
+                drawGrid();
+                setMessageBox(`Placed ${selectedCellType} at (${clickedHex.q}, ${clickedHex.r})`);
+            } else if (gameActive) {
+                // Game mode: handle jumps (single click for target)
+                if (!playerHex) {
+                    setMessageBox("Player not found on the map. Reset level or add a player in editor mode.", 'error');
+                    return;
+                }
+
+                const targetHex = clickedHex; // The user clicked the intended landing spot
+
+                let foundValidJump = false;
+                let actualJumpingHex = null; // The hex that actually makes the jump (player or blue)
+                let actualOverHex = null;
+                let actualJumpingCellType = null;
+
+                // Iterate through all cells to find a potential jumper (Player or Blue)
+                for (const [key, type] of grid.entries()) {
+                    const currentHex = JSON.parse(key);
+                    if (type === 'PLAYER' || type === 'BLUE') { // Only Player and Blue cells can initiate jumps
+                        // Calculate the potential 'overHex' if 'currentHex' jumps to 'targetHex'
+                        // This is (currentHex + targetHex) / 2
+                        const potentialOverHex = {
+                            q: (currentHex.q + targetHex.q) / 2,
+                            r: (currentHex.r + targetHex.r) / 2
+                        };
+
+                        // Ensure the calculated overHex is an integer hex coordinate (i.e., collinear)
+                        if (potentialOverHex.q % 1 === 0 && potentialOverHex.r % 1 === 0) {
+                            // Check if currentHex is 1 unit from overHex and 2 units from targetHex
+                            if (hexDistance(currentHex, potentialOverHex) === 1 && hexDistance(currentHex, targetHex) === 2) {
+                                // We found a potential jumping sequence. Now validate it.
+                                if (isValidJump(currentHex, potentialOverHex, targetHex)) {
+                                    actualJumpingHex = currentHex;
+                                    actualOverHex = potentialOverHex;
+                                    actualJumpingCellType = type; // Get the actual type of the cell that is jumping
+                                    foundValidJump = true;
+                                    break; // Found a valid jump, no need to check other cells
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (foundValidJump) {
+                    makeJump(actualJumpingHex, actualOverHex, targetHex, actualJumpingCellType);
+                } else {
+                    setMessageBox("Invalid jump. Click an empty space or gold cell two steps away from a movable cell (green or blue).", 'error');
+                }
+                drawGrid(); // Always redraw after a click in game mode
+            } else {
+                setMessageBox("Game is not active. Click 'Start Game' to play or 'Toggle Editor Mode' to build a map.", 'info');
+            }
+        }
+
+        function handleCanvasMouseDown(event) {
+            event.preventDefault(); // Prevent default browser drag behavior
+            const { x, y } = getAdjustedMouseCoords(event); // Get adjusted coords for hex detection
+
+            if (editorMode) {
+                const clickedHex = pixelToHex(x, y);
+                const clickedHexKey = JSON.stringify(clickedHex);
+                const clickedCellType = grid.get(clickedHexKey);
+
+                // Only allow dragging of PLAYER and BLUE cells
+                if (clickedCellType === 'PLAYER' || clickedCellType === 'BLUE') {
+                    isDragging = true;
+                    draggedHex = clickedHex;
+                    draggedCellType = clickedCellType;
+                    dragOriginalHex = { ...clickedHex }; // Store original position
+                    // Temporarily remove the cell from its original position for visual drag effect
+                    grid.set(clickedHexKey, 'EMPTY');
+                    drawGrid(); // Redraw without the original cell
+                } else {
+                    isPanning = true;
+                    lastPanX = event.clientX;
+                    lastPanY = event.clientY;
+                }
+            } else { // Game mode, only panning
+                isPanning = true;
+                lastPanX = event.clientX;
+                lastPanY = event.clientY;
+            }
+        }
+
+        function handleCanvasMouseMove(event) {
+            event.preventDefault(); // Prevent default browser drag behavior
+
+            if (isDragging) {
+                const { x, y } = getAdjustedMouseCoords(event);
+                const currentHoverHex = pixelToHex(x, y);
+                draggedHex = currentHoverHex;
+                drawGrid();
+            } else if (isPanning) {
+                const dx = event.clientX - lastPanX;
+                const dy = event.clientY - lastPanY;
+                offsetX += dx;
+                offsetY += dy;
+                lastPanX = event.clientX;
+                lastPanY = event.clientY;
+                drawGrid();
+            }
+        }
+
+        function handleCanvasMouseUp(event) {
+            if (isDragging) {
+                const { x, y } = getAdjustedMouseCoords(event);
+                const droppedHex = pixelToHex(x, y);
+                const droppedHexKey = JSON.stringify(droppedHex);
+                const originalHexKey = JSON.stringify(dragOriginalHex);
+
+                // If dropped on the same hex, just put it back
+                if (droppedHex.q === dragOriginalHex.q && droppedHex.r === dragOriginalHex.r) {
+                    grid.set(originalHexKey, draggedCellType);
+                } else {
+                    const targetCellType = grid.get(droppedHexKey);
+                    if (targetCellType === 'EMPTY') {
+                        grid.set(droppedHexKey, draggedCellType);
+                    } else {
+                        // If target is not empty, swap them
+                        grid.set(droppedHexKey, draggedCellType); // Place dragged cell
+                        grid.set(originalHexKey, targetCellType); // Move target cell to original position
+                    }
+                    // Update player/gold references if they were moved
+                    if (draggedCellType === 'PLAYER') playerHex = droppedHex;
+                    if (draggedCellType === 'GOLD') goldHex = droppedHex;
+
+                    // If the swapped cell was player/gold, update its reference
+                    if (targetCellType === 'PLAYER') playerHex = dragOriginalHex;
+                    if (targetCellType === 'GOLD') goldHex = dragOriginalHex;
+                }
+                draggedHex = null;
+                draggedCellType = null;
+                dragOriginalHex = null;
+                setMessageBox("Cell moved!");
+            }
+            isPanning = false;
+            isDragging = false;
+            drawGrid();
+        }
+
+        function handleCanvasMouseLeave(event) {
+            // End drag/pan if mouse leaves canvas
+            if (isDragging) {
+                // If dragging, put the cell back to its original position
+                grid.set(JSON.stringify(dragOriginalHex), draggedCellType);
+                draggedHex = null;
+                draggedCellType = null;
+                dragOriginalHex = null;
+                setMessageBox("Drag cancelled: Cell returned to original position.");
+            }
+            isPanning = false;
+            isDragging = false;
+            drawGrid();
+        }
+
+        function handleCanvasWheel(event) {
+            event.preventDefault(); // Prevent page scrolling
+
+            const zoomFactor = 1.1; // How much to zoom per scroll tick
+            const mouseX = event.clientX - canvas.getBoundingClientRect().left;
+            const mouseY = event.clientY - canvas.getBoundingClientRect().top;
+
+            // Calculate mouse position relative to the current canvas origin (after initial centering and pan)
+            const mouseWorldX = (mouseX - canvas.width / 2 - offsetX);
+            const mouseWorldY = (mouseY - canvas.height / 2 - offsetY);
+
+            let newScale = scale;
+            if (event.deltaY < 0) { // Zoom in
+                newScale *= zoomFactor;
+            } else { // Zoom out
+                newScale /= zoomFactor;
+            }
+
+            // Clamp scale to min/max
+            newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
+
+            // Adjust offset to zoom towards the mouse pointer
+            offsetX -= mouseWorldX * (newScale / scale - 1);
+            offsetY -= mouseWorldY * (newScale / scale - 1);
+
+            scale = newScale;
+            drawGrid();
+        }
+
+        // Touch event handlers for panning and zooming
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let initialPinchDistance = -1;
+        let lastTouchDistance = -1;
+
+        function handleTouchStart(event) {
+            event.preventDefault(); // Prevent scrolling and other default behaviors
+            if (event.touches.length === 1) {
+                isPanning = true;
+                lastPanX = event.touches[0].clientX;
+                lastPanY = event.touches[0].clientY;
+
+                // For editor drag-and-drop
+                if (editorMode) {
+                    const { x, y } = getAdjustedMouseCoords(event.touches[0]);
+                    const clickedHex = pixelToHex(x, y);
+                    const clickedHexKey = JSON.stringify(clickedHex);
+                    const clickedCellType = grid.get(clickedHexKey);
+
+                    // Only allow dragging of PLAYER and BLUE cells
+                    if (clickedCellType === 'PLAYER' || clickedCellType === 'BLUE') {
+                        isDragging = true;
+                        draggedHex = clickedHex;
+                        draggedCellType = clickedCellType;
+                        dragOriginalHex = { ...clickedHex };
+                        grid.set(clickedHexKey, 'EMPTY');
+                        drawGrid();
+                    }
+                }
+
+            } else if (event.touches.length === 2) {
+                isPanning = false; // Disable single-finger pan if two fingers are down
+                isDragging = false; // Disable drag if two fingers are down
+                const dx = event.touches[0].clientX - event.touches[1].clientX;
+                const dy = event.touches[0].clientY - event.touches[1].clientY;
+                initialPinchDistance = Math.sqrt(dx * dx + dy * dy);
+                lastTouchDistance = initialPinchDistance;
+            }
+        }
+
+        function handleTouchMove(event) {
+            event.preventDefault(); // Prevent scrolling and other default behaviors
+
+            if (event.touches.length === 1 && (isPanning || isDragging)) {
+                if (isDragging) {
+                    const { x, y } = getAdjustedMouseCoords(event.touches[0]);
+                    const currentHoverHex = pixelToHex(x, y);
+                    draggedHex = currentHoverHex;
+                } else if (isPanning) {
+                    const dx = event.touches[0].clientX - lastPanX;
+                    const dy = event.touches[0].clientY - lastPanY;
+                    offsetX += dx;
+                    offsetY += dy;
+                    lastPanX = event.touches[0].clientX;
+                    lastPanY = event.touches[0].clientY;
+                }
+                drawGrid();
+            } else if (event.touches.length === 2) {
+                const dx = event.touches[0].clientX - event.touches[1].clientX;
+                const dy = event.touches[0].clientY - event.touches[1].clientY;
+                const currentPinchDistance = Math.sqrt(dx * dx + dy * dy);
+
+                if (lastTouchDistance !== -1) {
+                    const scaleFactor = currentPinchDistance / lastTouchDistance;
+                    let newScale = scale * scaleFactor;
+
+                    newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
+
+                    // Calculate the center point of the two touches in canvas coordinates
+                    const touchCenterX = (event.touches[0].clientX + event.touches[1].clientX) / 2 - canvas.getBoundingClientRect().left;
+                    const touchCenterY = (event.touches[0].clientY + event.touches[1].clientY) / 2 - canvas.getBoundingClientRect().top;
+
+                    // Adjust offset to zoom towards the pinch center
+                    const mouseWorldX = (touchCenterX - canvas.width / 2 - offsetX);
+                    const mouseWorldY = (touchCenterY - canvas.height / 2 - offsetY);
+
+                    offsetX -= mouseWorldX * (newScale / scale - 1);
+                    offsetY -= mouseWorldY * (newScale / scale - 1);
+
+                    scale = newScale;
+                }
+                lastTouchDistance = currentPinchDistance;
+                drawGrid();
+            }
+        }
+
+        function handleTouchEnd(event) {
+            if (isDragging) {
+                const { x, y } = getAdjustedMouseCoords(event.changedTouches[0]);
+                const droppedHex = pixelToHex(x, y);
+                const droppedHexKey = JSON.stringify(droppedHex);
+                const originalHexKey = JSON.stringify(dragOriginalHex);
+
+                if (droppedHex.q === dragOriginalHex.q && droppedHex.r === dragOriginalHex.r) {
+                    grid.set(originalHexKey, draggedCellType);
+                } else {
+                    const targetCellType = grid.get(droppedHexKey);
+                    if (targetCellType === 'EMPTY') {
+                        grid.set(droppedHexKey, draggedCellType);
+                    } else {
+                        grid.set(droppedHexKey, draggedCellType);
+                        grid.set(originalHexKey, targetCellType);
+                    }
+                    if (draggedCellType === 'PLAYER') playerHex = droppedHex;
+                    if (draggedCellType === 'GOLD') goldHex = droppedHex;
+                    if (targetCellType === 'PLAYER') playerHex = dragOriginalHex;
+                    if (targetCellType === 'GOLD') goldHex = dragOriginalHex;
+                }
+                draggedHex = null;
+                draggedCellType = null;
+                dragOriginalHex = null;
+                setMessageBox("Cell moved!");
+            }
+            isPanning = false;
+            isDragging = false;
+            initialPinchDistance = -1;
+            lastTouchDistance = -1;
+            drawGrid();
+        }
+
+
+        function handleToggleEditor() {
+            editorMode = !editorMode;
+            if (editorMode) {
+                gameActive = false; // Stop game if entering editor
+                editorPanel.classList.remove('hidden');
+                toggleEditorBtn.textContent = 'Exit Editor Mode';
+                setMessageBox("Editor Mode Active. Select a cell type and click on the grid to place/move cells. Drag Green (Player) and Blue cells to move them. Pan and zoom the grid with mouse/touch.", 'info');
+                mapDataTextarea.value = JSON.stringify(Object.fromEntries(grid), null, 2); // Populate textarea
+            } else {
+                editorPanel.classList.add('hidden');
+                toggleEditorBtn.textContent = 'Toggle Editor Mode';
+                setMessageBox("Editor Mode Inactive. Click 'Start Game' to play. Pan and zoom the grid with mouse/touch.", 'info');
+                // Ensure player and gold exist before exiting editor if they were removed
+                if (!playerHex || !goldHex) {
+                    setMessageBox("Warning: No Player or Gold cell found. Add them in editor mode before playing.", 'error');
+                }
+            }
+            drawGrid();
+        }
+
+        function handleCellTypeButtonClick(event) {
+            cellTypeButtons.forEach(btn => btn.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+            selectedCellType = event.currentTarget.dataset.cellType;
+            setMessageBox(`Selected cell type: ${selectedCellType}`);
+        }
+
+        function handleSaveMap() {
+            const currentMap = {};
+            grid.forEach((type, key) => {
+                currentMap[key] = type;
+            });
+            mapDataTextarea.value = JSON.stringify(currentMap, null, 2);
+            setMessageBox("Map data copied to text area. You can copy it now!", 'success');
+        }
+
+        function handleLoadMap() {
+            const mapData = mapDataTextarea.value;
+            initializeGrid(mapData); // Load from textarea
+            setMessageBox("Map loaded from text area. Click 'Start Game' to play.", 'success');
+        }
+
+        function handleLoadSelectedLevel() {
+            gameActive = false; // Stop game if a new level is loaded
+            initializeGrid(); // This will load the selected level from the dropdown
+            setMessageBox(`Level '${levelSelect.value}' loaded. Click 'Start Game' to play.`);
+        }
+
+        function handleDeselect() {
+            if (editorMode) {
+                selectedCellType = 'EMPTY';
+                cellTypeButtons.forEach(btn => btn.classList.remove('selected'));
+                document.querySelector('.cell-type-btn[data-cell-type="EMPTY"]').classList.add('selected');
+                setMessageBox("Editor: Selected cell type reset to EMPTY.");
+            } else if (gameActive) {
+                setMessageBox("Game: Nothing to deselect in single-click jump mode.");
+            } else {
+                setMessageBox("Nothing to deselect.");
+            }
+            drawGrid();
+        }
+
+        // --- Initialization and Event Listeners ---
+        function setupCanvasSize() {
+            const containerWidth = canvas.parentElement.clientWidth;
+            const size = Math.min(containerWidth, 600);
+            canvas.width = size;
+            canvas.height = size;
+            drawGrid();
+        }
+
+        window.onload = function() {
+            setupCanvasSize();
+            initializeGrid(); // Initialize with default level (level1)
+            setMessageBox("Welcome! Read the rules, click 'Start Game' to play, or 'Toggle Editor Mode' to create your own levels. Use mouse wheel/pinch to zoom, drag to pan.");
+
+            // Event Listeners
+            startGameBtn.addEventListener('click', startGame);
+            resetLevelBtn.addEventListener('click', resetLevel);
+            deselectBtn.addEventListener('click', handleDeselect);
+            toggleEditorBtn.addEventListener('click', handleToggleEditor);
+            loadMapBtn.addEventListener('click', handleLoadMap);
+            saveMapBtn.addEventListener('click', handleSaveMap);
+            loadSelectedLevelBtn.addEventListener('click', handleLoadSelectedLevel); // New event listener
+
+            cellTypeButtons.forEach(button => {
+                button.addEventListener('click', handleCellTypeButtonClick);
+            });
+            document.querySelector('.cell-type-btn[data-cell-type="EMPTY"]').classList.add('selected');
+
+            canvas.addEventListener('click', handleCanvasClick);
+            canvas.addEventListener('mousedown', handleCanvasMouseDown);
+            canvas.addEventListener('mousemove', handleCanvasMouseMove);
+            canvas.addEventListener('mouseup', handleCanvasMouseUp);
+            canvas.addEventListener('mouseleave', handleCanvasMouseLeave);
+            canvas.addEventListener('wheel', handleCanvasWheel, { passive: false });
+
+            canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+            canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+            canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+            canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+
+            window.addEventListener('resize', setupCanvasSize);
+        };
+    </script>
+</body>
+</html>
