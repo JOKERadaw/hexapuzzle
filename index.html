@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Hexatomata</title>
+    <title>hexapuzzle (Valerio Mancigotti)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -1189,7 +1189,17 @@
             const TAP_THRESHOLD_MS = 300;
             const MOVE_THRESHOLD_PX = 10; // Increased threshold for more forgiving taps
 
-            if (!isDragging && touchDuration < TAP_THRESHOLD_MS && !touchMoved) {
+            // Check if the touch moved significantly.
+            // We need to re-calculate dx/dy here because touchMoved is set in handleTouchMove,
+            // but handleTouchMove might not have fired if it was a very quick tap.
+            const finalX = event.changedTouches[0].clientX;
+            const finalY = event.changedTouches[0].clientY;
+            const dx = Math.abs(finalX - touchStartX);
+            const dy = Math.abs(finalY - touchStartY);
+            const didMoveSignificantly = dx > MOVE_THRESHOLD_PX || dy > MOVE_THRESHOLD_PX;
+
+
+            if (!isDragging && touchDuration < TAP_THRESHOLD_MS && !didMoveSignificantly) {
                 // Simulate a click event at the touch end position
                 const touch = event.changedTouches[0];
                 const clickEvent = new MouseEvent('click', {
