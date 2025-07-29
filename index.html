@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hexagonal World Jumping Game</title>
+    <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Hexatomata</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -867,12 +869,19 @@
 
         // --- Event Handlers ---
 
-        function getAdjustedMouseCoords(event) {
+        function getAdjustedCoords(event) {
             const rect = canvas.getBoundingClientRect();
-            // Adjust for canvas center, pan, and zoom
-            const clientX = event.clientX;
-            const clientY = event.clientY;
+            let clientX, clientY;
 
+            if (event.touches && event.touches.length > 0) {
+                clientX = event.touches[0].clientX;
+                clientY = event.touches[0].clientY;
+            } else {
+                clientX = event.clientX;
+                clientY = event.clientY;
+            }
+
+            // Adjust for canvas center, pan, and zoom
             const x = (clientX - rect.left - canvas.width / 2 - offsetX) / scale;
             const y = (clientY - rect.top - canvas.height / 2 - offsetY) / scale;
             return { x, y };
@@ -881,7 +890,7 @@
         function handleCanvasClick(event) {
             if (isPanning || isDragging) return; // Prevent click if panning or dragging
 
-            const { x, y } = getAdjustedMouseCoords(event);
+            const { x, y } = getAdjustedCoords(event);
             const clickedHex = pixelToHex(x, y);
             const clickedHexKey = JSON.stringify(clickedHex);
             const clickedCellType = grid.get(clickedHexKey);
@@ -940,7 +949,7 @@
 
         function handleCanvasMouseDown(event) {
             event.preventDefault(); // Prevent default browser drag behavior
-            const { x, y } = getAdjustedMouseCoords(event); // Get adjusted coords for hex detection
+            const { x, y } = getAdjustedCoords(event); // Get adjusted coords for hex detection
 
             if (editorMode) {
                 const clickedHex = pixelToHex(x, y);
@@ -972,7 +981,7 @@
             event.preventDefault(); // Prevent default browser drag behavior
 
             if (isDragging) {
-                const { x, y } = getAdjustedMouseCoords(event);
+                const { x, y } = getAdjustedCoords(event);
                 const currentHoverHex = pixelToHex(x, y);
                 draggedHex = currentHoverHex;
                 drawGrid();
@@ -989,7 +998,7 @@
 
         function handleCanvasMouseUp(event) {
             if (isDragging) {
-                const { x, y } = getAdjustedMouseCoords(event);
+                const { x, y } = getAdjustedCoords(event);
                 const droppedHex = pixelToHex(x, y);
                 const droppedHexKey = JSON.stringify(droppedHex);
                 const originalHexKey = JSON.stringify(dragOriginalHex);
@@ -1082,7 +1091,7 @@
 
                 // For editor drag-and-drop
                 if (editorMode) {
-                    const { x, y } = getAdjustedMouseCoords(event.touches[0]);
+                    const { x, y } = getAdjustedCoords(event);
                     const clickedHex = pixelToHex(x, y);
                     const clickedHexKey = JSON.stringify(clickedHex);
                     const clickedCellType = grid.get(clickedHexKey);
@@ -1113,7 +1122,7 @@
 
             if (event.touches.length === 1 && (isPanning || isDragging)) {
                 if (isDragging) {
-                    const { x, y } = getAdjustedMouseCoords(event.touches[0]);
+                    const { x, y } = getAdjustedCoords(event);
                     const currentHoverHex = pixelToHex(x, y);
                     draggedHex = currentHoverHex;
                 } else if (isPanning) {
@@ -1156,7 +1165,7 @@
 
         function handleTouchEnd(event) {
             if (isDragging) {
-                const { x, y } = getAdjustedMouseCoords(event.changedTouches[0]);
+                const { x, y } = getAdjustedCoords(event.changedTouches[0]);
                 const droppedHex = pixelToHex(x, y);
                 const droppedHexKey = JSON.stringify(droppedHex);
                 const originalHexKey = JSON.stringify(dragOriginalHex);
