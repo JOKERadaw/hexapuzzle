@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Hexatomata</title>
+    <title>Valerio'shexes</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -1198,9 +1198,17 @@
             const dy = Math.abs(finalY - touchStartY);
             const didMoveSignificantly = dx > MOVE_THRESHOLD_PX || dy > MOVE_THRESHOLD_PX;
 
-            console.log('Touch end detected', touchDuration, touchMoved, isDragging);
+            // We rely on touchMoved flag set in handleTouchMove for significant movement
+            // const finalX = event.changedTouches[0].clientX;
+            // const finalY = event.changedTouches[0].clientY;
+            // const dx = Math.abs(finalX - touchStartX);
+            // const dy = Math.abs(finalY - touchStartY);
+            // const didMoveSignificantly = dx > MOVE_THRESHOLD_PX || dy > MOVE_THRESHOLD_PX;
 
-            if (!isDragging && touchDuration < TAP_THRESHOLD_MS && !didMoveSignificantly) {
+            console.log('Touch end detected. isDragging:', isDragging, 'touchDuration:', touchDuration, 'touchMoved:', touchMoved);
+
+            // Changed condition: use !touchMoved instead of !didMoveSignificantly
+            if (!isDragging && touchDuration < TAP_THRESHOLD_MS && !touchMoved) {
                 // This was a tap - execute game logic directly
                 const { x, y } = getAdjustedCoords(event.changedTouches[0]);
                 const clickedHex = pixelToHex(x, y);
@@ -1210,6 +1218,7 @@
                 console.log('Clicked hex:', clickedHex);
                 console.log('Cell type:', clickedCellType);
 
+                console.log('Editor Mode:', editorMode, 'Game Active:', gameActive);
                 if (editorMode) {
                     // Editor mode: place or select cell
                     if (selectedCellType === 'PLAYER') {
@@ -1223,6 +1232,7 @@
                     drawGrid();
                     setMessageBox(`Placed ${selectedCellType} at (${clickedHex.q}, ${clickedHex.r})`);
                 } else if (gameActive) {
+                    console.log('Entering game active logic. Clicked type:', clickedCellType, 'Selected jumping hex:', selectedJumpingHex);
                     // Game mode: handle explicit selection and jumps
                     if (clickedCellType === 'PLAYER' || clickedCellType === 'BLUE') {
                         // User clicked on a movable cell, so select it
