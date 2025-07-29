@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Hexapuzzle Valerio Mancigotti</title>
+    <title>Hexatomata</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -1081,9 +1081,16 @@
         let touchStartY = 0;
         let initialPinchDistance = -1;
         let lastTouchDistance = -1;
+        let touchStartTime = 0;
+        let touchMoved = false;
 
         function handleTouchStart(event) {
             event.preventDefault(); // Prevent scrolling and other default behaviors
+            touchStartTime = Date.now();
+            touchMoved = false;
+            touchStartX = event.touches[0].clientX;
+            touchStartY = event.touches[0].clientY;
+            
             if (event.touches.length === 1) {
                 isPanning = true;
                 lastPanX = event.touches[0].clientX;
@@ -1119,6 +1126,17 @@
 
         function handleTouchMove(event) {
             event.preventDefault(); // Prevent scrolling and other default behaviors
+            
+            // Detect if touch has moved significantly
+            if (event.touches.length === 1) {
+                const currentX = event.touches[0].clientX;
+                const currentY = event.touches[0].clientY;
+                const dx = Math.abs(currentX - touchStartX);
+                const dy = Math.abs(currentY - touchStartY);
+                if (dx > 5 || dy > 5) {
+                    touchMoved = true;
+                }
+            }
 
             if (event.touches.length === 1 && (isPanning || isDragging)) {
                 if (isDragging) {
@@ -1164,6 +1182,28 @@
         }
 
         function handleTouchEnd(event) {
+            event.preventDefault();
+            
+            // Check if this was a tap (short duration, no movement)
+            const touchDuration = Date.now() - touchStartTime;
+            const TAP_THRESHOLD_MS = 300;
+            const MOVE_THRESHOLD_PX = 10; // Increased threshold for more forgiving taps
+
+            if (!isDragging && touchDuration < TAP_THRESHOLD_MS && !touchMoved) {
+                // Simulate a click event at the touch end position
+                const touch = event.changedTouches[0];
+                const clickEvent = new MouseEvent('click', {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window,
+                    clientX: touch.clientX,
+                    clientY: touch.clientY,
+                    screenX: touch.screenX,
+                    screenY: touch.screenY,
+                });
+                canvas.dispatchEvent(clickEvent);
+            }
+
             if (isDragging) {
                 const { x, y } = getAdjustedCoords(event.changedTouches[0]);
                 const droppedHex = pixelToHex(x, y);
