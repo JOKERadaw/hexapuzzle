@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>hexapuzzle (Valerio Mancigotti)</title>
+    <title>Hexatomata</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -1198,20 +1198,68 @@
             const dy = Math.abs(finalY - touchStartY);
             const didMoveSignificantly = dx > MOVE_THRESHOLD_PX || dy > MOVE_THRESHOLD_PX;
 
+            console.log('Touch end detected', touchDuration, touchMoved, isDragging);
 
             if (!isDragging && touchDuration < TAP_THRESHOLD_MS && !didMoveSignificantly) {
-                // Simulate a click event at the touch end position
-                const touch = event.changedTouches[0];
-                const clickEvent = new MouseEvent('click', {
-                    bubbles: true,
-                    cancelable: true,
-                    view: window,
-                    clientX: touch.clientX,
-                    clientY: touch.clientY,
-                    screenX: touch.screenX,
-                    screenY: touch.screenY,
-                });
-                canvas.dispatchEvent(clickEvent);
+                // This was a tap - execute game logic directly
+                const { x, y } = getAdjustedCoords(event.changedTouches[0]);
+                const clickedHex = pixelToHex(x, y);
+                const clickedHexKey = JSON.stringify(clickedHex);
+                const clickedCellType = grid.get(clickedHexKey);
+
+                console.log('Clicked hex:', clickedHex);
+                console.log('Cell type:', clickedCellType);
+
+                if (editorMode) {
+                    // Editor mode: place or select cell
+                    if (selectedCellType === 'PLAYER') {
+                        if (playerHex) grid.set(JSON.stringify(playerHex), 'EMPTY');
+                        playerHex = clickedHex;
+                    } else if (selectedCellType === 'GOLD') {
+                        if (goldHex) grid.set(JSON.stringify(goldHex), 'EMPTY');
+                        goldHex = clickedHex;
+                    }
+                    grid.set(clickedHexKey, selectedCellType);
+                    drawGrid();
+                    setMessageBox(`Placed ${selectedCellType} at (${clickedHex.q}, ${clickedHex.r})`);
+                } else if (gameActive) {
+                    // Game mode: handle explicit selection and jumps
+                    if (clickedCellType === 'PLAYER' || clickedCellType === 'BLUE') {
+                        // User clicked on a movable cell, so select it
+                        selectedJumpingHex = clickedHex;
+                        setMessageBox(`Selected ${clickedCellType} cell at (${clickedHex.q}, ${clickedHex.r}). Now click an empty space or gold cell to jump.`);
+                    } else if (clickedCellType === 'EMPTY' || clickedCellType === 'GOLD') {
+                        // User clicked on a target cell
+                        if (selectedJumpingHex) {
+                            const jumpingCellType = grid.get(JSON.stringify(selectedJumpingHex));
+                            // Calculate the 'overHex' (the cell in between jumpingHex and targetHex)
+                            const overHex = {
+                                q: (selectedJumpingHex.q + clickedHex.q) / 2,
+                                r: (selectedJumpingHex.r + clickedHex.r) / 2
+                            };
+
+                            // Ensure the calculated overHex is an integer hex coordinate (i.e., collinear)
+                            if (overHex.q % 1 === 0 && overHex.r % 1 === 0) {
+                                if (isValidJump(selectedJumpingHex, overHex, clickedHex)) {
+                                    makeJump(selectedJumpingHex, overHex, clickedHex, jumpingCellType);
+                                } else {
+                                    // isValidJump already sets specific error message
+                                }
+                            } else {
+                                setMessageBox("Invalid jump path. The target is not directly two steps away in a straight line.", 'error');
+                            }
+                        } else {
+                            setMessageBox("Please select a Green (Player) or Blue cell to jump first.", 'info');
+                        }
+                    } else {
+                        // User clicked on an unselectable cell (Black, Red)
+                        selectedJumpingHex = null; // Clear any previous selection
+                        setMessageBox("Invalid selection. Please click a Green (Player) or Blue cell to start a jump.", 'error');
+                    }
+                    drawGrid(); // Always redraw after a click in game mode
+                } else {
+                    setMessageBox("Game is not active. Click 'Start Game' to play or 'Toggle Editor Mode' to build a map.", 'info');
+                }
             }
 
             if (isDragging) {
