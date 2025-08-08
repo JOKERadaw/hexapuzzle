@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Valerio'shexes</title>
+    <title>HexaJump Editor</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -171,35 +171,6 @@
 
         <div class="message-box" id="messageBox">Welcome! Read the rules, click 'Start Game' or design your level.</div>
 
-        <!-- Game Rules Section -->
-        <div class="rules-section">
-            <h2 class="text-blue-300">Game Rules</h2>
-            <p><strong>Objective:</strong> Navigate your player (green cell) to reach the gold cell and complete the level.</p>
-            <h3 class="text-lg font-medium mb-2 text-gray-200">Game Elements:</h3>
-            <ul>
-                <li>🟢 <strong>Green Cell</strong> - Your player character (<strong>movable in editor</strong>)</li>
-                <li>🔵 <strong>Blue Cells</strong> - Jumpable cells that you can leap over. They can also **initiate jumps** themselves. (<strong>movable in editor</strong>)</li>
-                <li>⚫ <strong>Black Cells</strong> - Immovable obstacles you can jump over but cannot move (immovable in editor)</li>
-                <li>🔴 <strong>Red Cells</strong> - Enemies that block jumps completely (immovable in editor)</li>
-                <li>🟡 <strong>Gold Cell</strong> - Your target destination to win the level (immovable in editor)</li>
-            </ul>
-            <h3 class="text-lg font-medium mb-2 text-gray-200">Movement Rules:</h3>
-            <ul>
-                <li>You can <strong>ONLY</strong> move by jumping - no regular movement allowed.</li>
-                <li><strong>Jump Mechanism:</strong> First, **click on a Green (Player) or Blue cell** to select it. Then, click on an empty space or the gold cell that is two steps away to make the jump.</li>
-                <li><strong>Jump Requirements:</strong>
-                    <ul>
-                        <li>You can jump over <strong>BLUE</strong> cells (they stay in place).</li>
-                        <li>You can jump over <strong>BLACK</strong> cells (they cannot be moved but don't block jumps).</li>
-                        <li>You can jump over <strong>GREEN</strong> cells (they stay in place).</li>
-                        <li>You <strong>CANNOT</strong> jump over <strong>RED</strong> cells (enemies block all movement).</li>
-                        <li>You must land on an empty space or the gold goal.</li>
-                    </ul>
-                </li>
-            </ul>
-            <p><strong>Victory Condition:</strong> Successfully land on the gold cell to complete the level!</p>
-        </div>
-
         <div class="flex flex-col md:flex-row gap-4">
             <div class="flex-grow">
                 <canvas id="gameCanvas"></canvas>
@@ -237,6 +208,7 @@
                     <div id="editorPanel" class="hidden">
                         <h3 class="text-lg font-medium mb-2 text-gray-200">Select Cell Type:</h3>
                         <div class="button-group mb-4">
+                            <button class="cell-type-btn bg-red-800 text-white" data-cell-type="DELETE">D</button>
                             <button class="cell-type-btn bg-gray-800 text-white" data-cell-type="EMPTY">E</button>
                             <button class="cell-type-btn bg-green-500 text-white" data-cell-type="PLAYER">P</button>
                             <button class="cell-type-btn bg-blue-500 text-white" data-cell-type="BLUE">B</button>
@@ -244,11 +216,13 @@
                             <button class="cell-type-btn bg-red-500 text-white" data-cell-type="RED">R</button>
                             <button class="cell-type-btn bg-yellow-500 text-white" data-cell-type="GOLD">G</button>
                         </div>
-                        <h3 class="text-lg font-medium mb-2 text-gray-200">Map Data:</h3>
+                        <div class="button-group">
+                            <button id="saveMapBtn" class="btn btn-secondary w-full">Save Map</button>
+                        </div>
+                        <h3 class="text-lg font-medium my-2 text-gray-200">Map Data:</h3>
                         <textarea id="mapDataTextarea" class="w-full mb-3"></textarea>
                         <div class="button-group">
                             <button id="loadMapBtn" class="btn btn-primary w-full">Load Map</button>
-                            <button id="saveMapBtn" class="btn btn-secondary w-full">Save Map</button>
                         </div>
                     </div>
                 </div>
@@ -897,16 +871,28 @@
 
             if (editorMode) {
                 // Editor mode: place or select cell
-                if (selectedCellType === 'PLAYER') {
-                    if (playerHex) grid.set(JSON.stringify(playerHex), 'EMPTY');
-                    playerHex = clickedHex;
-                } else if (selectedCellType === 'GOLD') {
-                    if (goldHex) grid.set(JSON.stringify(goldHex), 'EMPTY');
-                    goldHex = clickedHex;
+                if(selectedCellType === 'DELETE') {
+                    grid.delete(clickedHexKey);
+                    drawGrid();
+                    setMessageBox(`Deleted ${clickedHex.q}, ${clickedHex.r}`);
+                } else {
+                    
+                    if (selectedCellType === 'PLAYER') {
+                        if (playerHex) grid.set(JSON.stringify(playerHex), 'EMPTY');
+                        playerHex = clickedHex;
+                    } else if (selectedCellType === 'GOLD') {
+                        if (goldHex) grid.set(JSON.stringify(goldHex), 'EMPTY');
+                        goldHex = clickedHex;
+                    }
+                    grid.set(clickedHexKey, selectedCellType);
+                    drawGrid();
+                    setMessageBox(`Placed ${selectedCellType} at (${clickedHex.q}, ${clickedHex.r})`);
                 }
-                grid.set(clickedHexKey, selectedCellType);
-                drawGrid();
-                setMessageBox(`Placed ${selectedCellType} at (${clickedHex.q}, ${clickedHex.r})`);
+                const currentMap = {};
+                grid.forEach((type, key) => {
+                    currentMap[key] = type;
+                });
+                mapDataTextarea.value = JSON.stringify(currentMap, null, 2);
             } else if (gameActive) {
                 // Game mode: handle explicit selection and jumps
                 if (clickedCellType === 'PLAYER' || clickedCellType === 'BLUE') {
@@ -1333,12 +1319,13 @@
         }
 
         function handleSaveMap() {
-            const currentMap = {};
+            /*const currentMap = {};
             grid.forEach((type, key) => {
                 currentMap[key] = type;
             });
             mapDataTextarea.value = JSON.stringify(currentMap, null, 2);
             setMessageBox("Map data copied to text area. You can copy it now!", 'success');
+            */
         }
 
         function handleLoadMap() {
